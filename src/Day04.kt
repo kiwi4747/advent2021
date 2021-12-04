@@ -8,29 +8,46 @@ fun main() {
         println()
     }
 
-    fun calculatePoints(table: List<String>): Int {
+    fun isTableWinnerByRow(table: List<List<Int>>): Boolean {
+        table.map { row ->
+            if (row.count { it == -1 } == 5) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun isRowWinner(row: List<Int>): Boolean {
+        if (row.count { it == -1 } == 5) {
+            return true
+        }
+        return false
+    }
+
+    fun calculatePoints(table: List<List<Int>>): Int {
         var summona = 0
         table.map { row ->
-            if (!row.contains("x x x x x"))
-                summona += row.split(" ").filter { it != "x" }.filter { it.isNotBlank() }.map { it.toInt() }.reduce { acc, i -> acc + i }
+            if (!isRowWinner(row))
+                summona += row.filterNot { it == -1 }.reduce { acc, i -> acc + i }
         }
         return summona
     }
 
-    fun findWinners(tables: List<List<String>>): List<List<String>> {
-        val winners = mutableListOf<List<String>>()
+
+    fun findWinners(tables: List<List<List<Int>>>): List<List<List<Int>>> {
+        val winners = mutableListOf<List<List<Int>>>()
         tables.map { table ->
             // check row
-            if (table.contains("x x x x x") || table.contains(" x x x x x")) {
+            if (isTableWinnerByRow(table)) {
                 winners.add(table)
             } else {
-                if (table.filter { it.contains("x") }.size == 5) {
-                    val tabellina = table.map { it.split(" ").filterNot { it.isEmpty() } }
-                    tabellina.firstOrNull()?.let {
+                if (table.filter { it.contains(-1) }.size == 5) {
+                    table.first().let {
                         it.mapIndexed { index, s ->
-                            if (s.contains("x")) {
-                                if (tabellina.filter { it[index] == "x" }.size == 5) {
+                            if (s == -1) {
+                                if (table.filter { it[index] == -1 }.size == 5) {
                                     winners.add(table)
+                                    return@let
                                 }
                             }
                         }
@@ -42,12 +59,15 @@ fun main() {
         return winners
     }
 
-    fun part1(numbersDrawn: List<String>, tables: List<List<String>>): Int {
+    fun part1(numbersDrawn: List<Int>, tables: List<List<List<Int>>>): Int {
         var temp = tables
         numbersDrawn.map { drawn ->
             temp = temp.map {
                 it.map {
-                    it.replace("\\b$drawn\\b".toRegex(), "x")
+                    it.map {
+                        if (it == drawn) -1
+                        else it
+                    }
                 }
             }
             findWinners(temp).firstOrNull()?.let {
@@ -57,18 +77,21 @@ fun main() {
         return -1
     }
 
-    fun part2(numbersDrawn: List<String>, tables: List<List<String>>): Int {
+    fun part2(numbersDrawn: List<Int>, tables: List<List<List<Int>>>): Int {
         var temp = tables
         numbersDrawn.map { drawn ->
             temp = temp.map {
                 it.map {
-                    it.replace("\\b$drawn\\b".toRegex(), "x")
+                    it.map {
+                        if (it == drawn) -1
+                        else it
+                    }
                 }
             }
             val winners = findWinners(temp)
             if (temp.size == 1 && winners.size == 1) {
                 println("drawn = $drawn")
-                return calculatePoints(temp[0]) * drawn.toInt()
+                return calculatePoints(temp[0]) * drawn
             }
             temp = temp.filterNot { it in winners }
         }
@@ -78,10 +101,18 @@ fun main() {
 
     val input = readInput("Day04")
 
-    val numbersDrawn = input[0].split(",")
-    val tables = input.subList(2, input.size).map { it.replace("\\s{2,}".toRegex(), " ") }.filter { it != "" }.chunked(5)
-    assert(part1(numbersDrawn, tables) == 38594)
-    assert(part2(numbersDrawn, tables) == 21184)
+    val numbersDrawn = input[0].split(",").map { it.toInt() }
+    val tables = input.subList(2, input.size).map { it.replace("\\s{2,}".toRegex(), " ") }.filter { it != "" }
+            .chunked(5)
+            .map {
+                it.map {
+                    it.split(" ")
+                            .filter { it.isNotBlank() }.map { it.toInt() }
+                }
+            }
+
+    // assert(part1(numbersDrawn, tables) == 38594)
+    //assert(part2(numbersDrawn, tables) == 21184)
     println(part1(numbersDrawn, tables))
     println(part2(numbersDrawn, tables))
 }
