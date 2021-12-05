@@ -56,10 +56,10 @@ fun main() {
             val y2 = item.positionEnd.y
             if (x1 == x2) {
                 val column = mutableListOf<Position>()
-                val min = min(x1, x2)
-                val max = max(x1, x2)
+                val min = min(y1, y2)
+                val max = max(y1, y2)
                 for (it in min..max) {
-                    column.add(Position(it, y1))
+                    column.add(Position(x1, it))
                 }
                 column.map { coordinate ->
                     if (xMap.contains(coordinate)) {
