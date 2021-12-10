@@ -3,12 +3,12 @@ fun main() {
     fun part1(input: List<String>): Int {
         var count = 0
         input.map {
-            count += it.split(" ").count { it.length == (2) || it.length == (3) || it.length == 4 || it.length == 7 }
+            count += it.split(" ").count { word -> word.length == (2) || word.length == (3) || word.length == 4 || word.length == 7 }
         }
         return count
     }
 
-    fun MutableMap<Char, List<Int>>.intersectOrDont(char: Char, list: List<Int>) {
+    fun MutableMap<Char, List<Int>>.intersectOrPut(char: Char, list: List<Int>) {
         if (this.contains(char)) {
             this[char] = this[char]!!.intersect(list.toSet()).toList()
         } else {
@@ -18,44 +18,61 @@ fun main() {
 
     var lastDeleted: Pair<Int, Char>? = null
 
-    fun deleteNextPosition(mappina: MutableMap<Int, List<Char>>): MutableMap<Int, List<Char>> {
-        if (lastDeleted == null) {
-            lastDeleted = Pair(1, mappina[1]!![0])
+    fun getNextIntThatHasMoreThanOneChar(mappina: MutableMap<Int, List<Char>>): Int {
+        val lastInt = lastDeleted?.first ?: 0
+        for (i in (lastInt + 1)..mappina.size) {
+            if (mappina[i]!!.size > 1) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    fun getNextPositionToDelete(mappina: MutableMap<Int, List<Char>>) {
+        lastDeleted = if (lastDeleted == null) {
+            val nextInt = getNextIntThatHasMoreThanOneChar(mappina)
+            Pair(nextInt, mappina[nextInt]!![0])
         } else {
             val lastInt = lastDeleted!!.first
             val lastChar = lastDeleted!!.second
             if (mappina[lastInt]!!.indexOf(lastChar) == (mappina[lastInt]!!.size - 1)) {
-                lastDeleted = Pair(lastInt + 1, mappina[lastInt + 1]!!.get(0))
+                val nextInt = getNextIntThatHasMoreThanOneChar(mappina)
+                Pair(nextInt, mappina[nextInt]!![0])
             } else {
-                lastDeleted = Pair(lastInt, mappina[lastInt]!!.get(mappina[lastInt]!!.indexOf(lastChar) + 1))
+                Pair(lastInt, mappina[lastInt]!![mappina[lastInt]!!.indexOf(lastChar) + 1])
             }
         }
-        val mappinaDeleted = mutableMapOf<Int, List<Char>>()
-        mappina.map {
-            if (it.key == lastDeleted!!.first) {
-                mappinaDeleted.put(it.key, it.value.filterNot { it == lastDeleted!!.second })
-            } else {
-                mappinaDeleted.put(it.key, it.value)
-            }
-        }
-        return mappinaDeleted
     }
 
-    fun decypher(map: Map<Int, Char>, output: String): Int {
-        val reversed = map.entries.associate { (k, v) -> v to k }
-        val list = output.split(" ")
-        val results = mutableListOf<List<Int>>()
-        list.map { word ->
-            var resultino = mutableListOf<Int>()
-            word.map {
-                resultino.add(reversed[it]!!)
-            }
-            resultino.sort()
-            if (resultino.isNotEmpty()) {
-                results.add(resultino)
+    fun deleteNextPosition(possibleCharForPosition: MutableMap<Int, List<Char>>): MutableMap<Int, List<Char>> {
+        getNextPositionToDelete(possibleCharForPosition)
+        val tempMap = mutableMapOf<Int, List<Char>>()
+        possibleCharForPosition.map {
+            if (it.key == lastDeleted!!.first) {
+                tempMap.put(it.key, it.value.filterNot { char -> char == lastDeleted!!.second })
+            } else {
+                tempMap.put(it.key, it.value)
             }
         }
-        val risultatoDavvero = results.map {
+        return tempMap
+    }
+
+    fun decipher(map: Map<Int, Char>, output: String): Int {
+        val reversed = map.entries.associate { (k, v) -> v to k }
+        val outputCyphered = output.split(" ")
+        val wordsCyphered = mutableListOf<List<Int>>()
+        outputCyphered.map { word ->
+            val temp = mutableListOf<Int>()
+            word.map {
+                temp.add(reversed[it]!!)
+            }
+            temp.sort()
+            if (temp.isNotEmpty()) {
+                wordsCyphered.add(temp)
+            }
+        }
+        println(wordsCyphered)
+        val wordDeciphered = wordsCyphered.map {
             when (it) {
                 listOf(1, 2, 3, 4, 5, 6, 7) -> 8
                 listOf(1, 2, 3, 4, 6, 7) -> 9
@@ -71,61 +88,59 @@ fun main() {
             }
         }
         val stringBuilder = StringBuilder()
-        risultatoDavvero.map {
+        wordDeciphered.map {
             stringBuilder.append(it)
         }
-        println(risultatoDavvero)
-        println(" ${stringBuilder.toString().toInt()}")
         return stringBuilder.toString().toInt()
     }
 
-    fun getPositions(possiblePositions: Map<Char, List<Int>>, output: String): Map<Int, Char> {
-        var sure = mutableMapOf<Int, Char>()
+    fun getPositions(possibilitiesMap: Map<Char, List<Int>>, output: String): Int {
+        val surePositions = mutableMapOf<Int, Char>()
         lastDeleted = null
-        val startTempInvertito = mutableMapOf<Int, List<Char>>()
+        val startingMap = mutableMapOf<Int, List<Char>>()
         for (i in 1..7) {
-            startTempInvertito.put(i, possiblePositions.filter { it.value.contains(i) }.keys.toList())
+            startingMap[i] = possibilitiesMap.filter { it.value.contains(i) }.keys.toList()
         }
-        //tentativo
-        var tempInvertito = startTempInvertito
-        println(tempInvertito)
-        var failed = true
-        while (failed) {
-            failed = false
+        var possibleChars = startingMap
+        var success = false
+        while (!success) {
+            success = true
             for (i in 1..7) {
-                if (tempInvertito[i].isNullOrEmpty()) {
-                    sure.clear()
-                    //   println("${tempInvertito[i]} is null or empty")
-                    tempInvertito = deleteNextPosition(mutableMapOf<Int, List<Char>>().apply { putAll(startTempInvertito) })
-                    //   println(tempInvertito)
-                    failed = true
+                //if there is no char available for this position, delete the next possible combination and start anew
+                if (possibleChars[i].isNullOrEmpty()) {
+                    surePositions.clear()
+                    possibleChars = deleteNextPosition(mutableMapOf<Int, List<Char>>().apply { putAll(startingMap) })
+                    success = false
                     break
                 } else {
-                    sure[i] = tempInvertito[i]!!.first()
-                    //   println("sure=$sure")
-                    val newTemp = mutableMapOf<Int, List<Char>>()
-                    tempInvertito.map {
-                        if (it.key !in sure.keys) {
-                            newTemp.put(it.key, it.value.filterNot { it.equals(sure[i]) })
+                    //if there is a char available, put that in the position and delete it in all the other possible positions
+                    surePositions[i] = possibleChars[i]!!.first()
+                    val tempMap = mutableMapOf<Int, List<Char>>()
+                    possibleChars.map {
+                        if (it.key !in surePositions.keys) {
+                            tempMap.put(it.key, it.value.filterNot { it.equals(surePositions[i]) })
                         }
                     }
-                    tempInvertito = newTemp
-                    //    println(tempInvertito)
+                    possibleChars = tempMap
                 }
             }
-            if (!failed)
+            if (success) {
+                //if all the position are filled correctly, try deciphering the output. It could fail and throw an Exception
                 try {
-                    //   println(sure)
-                    decypher(sure, output)
+                    println(surePositions)
+                    return (decipher(surePositions, output))
                 } catch (e: Exception) {
-                    failed = true
-                    tempInvertito = deleteNextPosition(mutableMapOf<Int, List<Char>>().apply {
-                        putAll(startTempInvertito)
+                    // if it throws an exception, that means that there is at least a number bad formed.
+                    // Delete next possible combination and start anew
+                    success = false
+                    surePositions.clear()
+                    possibleChars = deleteNextPosition(mutableMapOf<Int, List<Char>>().apply {
+                        putAll(startingMap)
                     })
                 }
+            }
         }
-        //  println(sure)
-        return sure
+        return -1
     }
 
     fun containsAll(input: String, search: String): Boolean {
@@ -137,11 +152,11 @@ fun main() {
     }
 
     fun singleLine(input: List<String>, output: String): Int {
-        //be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb
+        // this is my favourite part. it checks every possible combination to reduce the possible positions. FIGHT ME.
         val thatsOne = input.firstOrNull { it.length == 2 }
+        val thatsFour = input.firstOrNull { it.length == 4 }
         val thatsSeven = input.firstOrNull { it.length == 3 }
         val thatsEight = input.firstOrNull { it.length == 7 }
-        val thatsFour = input.firstOrNull { it.length == 4 }
         val fiveChar = input.filter { it.length == 5 }
         val sixChar = input.filter { it.length == 6 }
         val thatsThree: String? =
@@ -155,85 +170,84 @@ fun main() {
         val thatsNine: String? = if (thatsFour != null) sixChar.firstOrNull { containsAll(it, thatsFour) } else null
         val possiblePositions = mutableMapOf<Char, List<Int>>()
 
-        if (thatsOne != null && thatsSeven != null) {
-            val top = thatsSeven.toCharArray().first { !(thatsOne.contains(it)) }
-            possiblePositions.intersectOrDont(top, listOf(1))
-        }
-
-        //twoChar
-        thatsOne?.toCharArray()?.map {
-            possiblePositions.intersectOrDont(it, listOf(3, 6))
-        }
-
-        //fourChar
-        thatsFour?.toCharArray()?.map {
-            possiblePositions.intersectOrDont(it, listOf(2, 3, 4, 6))
-        }
+        //if there is SEVEN
         if (thatsOne != null) {
-            thatsFour?.toCharArray()?.filter { !(thatsOne.contains(it)) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(2, 4))
+            thatsSeven?.toCharArray()?.first { !(thatsOne.contains(it)) }?.let {
+                possiblePositions.intersectOrPut(it, listOf(1))
             }
         }
 
-        //bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd | ed bcgafe cdgba cbgef
+        //if there is ONE
+        thatsOne?.toCharArray()?.map {
+            possiblePositions.intersectOrPut(it, listOf(3, 6))
+        }
 
-        //three
+        //if there is FOUR
+        thatsFour?.toCharArray()?.map {
+            possiblePositions.intersectOrPut(it, listOf(2, 3, 4, 6))
+        }
+        if (thatsOne != null) {
+            thatsFour?.toCharArray()?.filter { !(thatsOne.contains(it)) }?.map {
+                possiblePositions.intersectOrPut(it, listOf(2, 4))
+            }
+        }
+
+        //if there is THREE
         if (thatsSeven != null) {
             thatsThree?.toCharArray()?.filter { !thatsSeven.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(4, 7))
+                possiblePositions.intersectOrPut(it, listOf(4, 7))
             }
         }
         if (thatsOne != null) {
             thatsThree?.toCharArray()?.filter { !thatsOne.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(1, 4, 7))
+                possiblePositions.intersectOrPut(it, listOf(1, 4, 7))
             }
         }
 
-        //nine
+        //if there is NINE
         if (thatsFour != null) {
             thatsNine?.toCharArray()?.filter { !thatsFour.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(1, 7))
+                possiblePositions.intersectOrPut(it, listOf(1, 7))
             }
         }
         if (thatsThree != null) {
             thatsNine?.toCharArray()?.filter { !thatsThree.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(2))
+                possiblePositions.intersectOrPut(it, listOf(2))
             }
         }
 
-        //eight
+        //if there is EIGHT
         if (thatsFour != null) {
             thatsEight?.toCharArray()?.filter { !thatsFour.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(1, 5, 7))
+                possiblePositions.intersectOrPut(it, listOf(1, 5, 7))
             }
         }
         if (thatsNine != null) {
             thatsEight?.toCharArray()?.filter { !thatsNine.contains(it) }?.map {
-                possiblePositions.intersectOrDont(it, listOf(5))
+                possiblePositions.intersectOrPut(it, listOf(5))
             }
         }
 
+        //fill all the position unfilled
         (0..6).map {
-            possiblePositions.intersectOrDont('a' + it, listOf(1, 2, 3, 4, 5, 6, 7))
+            possiblePositions.intersectOrPut('a' + it, listOf(1, 2, 3, 4, 5, 6, 7))
         }
 
-        println(possiblePositions)
-
-        return decypher(getPositions(possiblePositions, output), output)
+        return getPositions(possiblePositions, output)
     }
 
 
     fun part2(inputs: List<String>, outputs: List<String>): Int {
-        val risultini = inputs.mapIndexed { index, it ->
+        val resultsForLine = inputs.mapIndexed { index, it ->
             singleLine(it.split(" "), outputs[index])
         }
-        println(risultini)
-        val megaSum = risultini.reduce { acc, i -> acc + i }
+        println(resultsForLine)
+        val megaSum = resultsForLine.reduce { acc, i -> acc + i }
         return megaSum
     }
 
 
-    val input = readInput("Day08")
+    val input = readInput("Day08_2")
     val inputs = input.map { it.split("|")[0] }
     val signals = input.map { it.split("|")[1] }
     //  println(part1(signals))
