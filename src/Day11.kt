@@ -1,8 +1,6 @@
-import javax.swing.Popup
-import javax.swing.text.Position
-
 fun main() {
     data class Position(val x: Int, val y: Int)
+
     fun Map<Position, Int>.print(): String {
         var count = 1
         val string = StringBuilder()
@@ -71,57 +69,50 @@ fun main() {
         }
     }
 
+    fun Map<Position, Int>.incrementAllEnergyBy1(): Map<Position, Int> {
+        val result = mutableMapOf<Position, Int>()
+        this.map { result.put(Position(it.key.x, it.key.y), it.value + 1) }
+        return result.toMap()
+    }
+
+
+
     fun part1(input: Map<Position, Int>): Int {
         var countFlashes = 0
-        println(input.toMap().print())
         //step increment by 1
-        var incremented = mutableMapOf<Position, Int>()
-        input.map { incremented.put(Position(it.key.x, it.key.y), it.value + 1) }
-        println("increment all by one")
-        println(incremented.toMap().print())
+        var incremented = input.incrementAllEnergyBy1().toMutableMap()
         for (i in 1..100) {
             //step every octopus ready, flashes and diffuses the energy
             val hasAlreadyFlashedInThisStep = mutableListOf<Position>()
             while (incremented.any { it.value > 9 && it.key !in hasAlreadyFlashedInThisStep }) {
-                var temp = incremented
+                val temp = incremented
                 incremented.map {
                     if (it.value > 9 && it.key !in hasAlreadyFlashedInThisStep) {
                         countFlashes++
                         hasAlreadyFlashedInThisStep.add(it.key)
                         temp.incrementAllAround(it.key, incremented)
-                        println("increment all around pos ${it.key.x}, ${it.key.y}")
-                        println(incremented.toMap().print())
                     }
                 }
                 incremented = temp
             }
-
-            //put all values>8 to 0
+            //put all values>9 to 0
             incremented = incremented.resetTo0Flashed().toMutableMap()
-            val temp = mutableMapOf<Position, Int>()
-            incremented.map { temp.put(Position(it.key.x, it.key.y), it.value + 1) }
 
-            println(incremented.toMap().print())
-            incremented = temp
+            incremented = incremented.incrementAllEnergyBy1().toMutableMap()
         }
-        //step1
         return countFlashes
     }
 
     fun part2(input: Map<Position, Int>): Int {
-        var countFlashes = 0
-        println(input.toMap().print())
         //step increment by 1
-        var incremented = mutableMapOf<Position, Int>()
-        input.map { incremented.put(Position(it.key.x, it.key.y), it.value + 1) }
-        for (i in 1..400) {
+        var incremented = input.incrementAllEnergyBy1().toMutableMap()
+        for (i in 1..1000) {
             //step every octopus ready, flashes and diffuses the energy
             val hasAlreadyFlashedInThisStep = mutableListOf<Position>()
             while (incremented.any { it.value > 9 && it.key !in hasAlreadyFlashedInThisStep }) {
-                var temp = incremented
+                val temp = incremented
                 incremented.map {
                     if (it.value > 9 && it.key !in hasAlreadyFlashedInThisStep) {
-                        countFlashes++
                         hasAlreadyFlashedInThisStep.add(it.key)
                         temp.incrementAllAround(it.key, incremented)
                     }
@@ -129,19 +120,15 @@ fun main() {
                 incremented = temp
             }
 
-            //put all values>8 to 0
-            incremented = incremented.resetTo0Flashed().toMutableMap()
-            println(incremented.toMap().print())
-            val temp = mutableMapOf<Position, Int>()
-            incremented.map { temp.put(Position(it.key.x, it.key.y), it.value + 1) }
-
-            incremented = temp
-            println("step $i")
-            if(hasAlreadyFlashedInThisStep.size==100){
+            if (hasAlreadyFlashedInThisStep.size == 100) {
                 return i
             }
+
+            //put all values>9 to 0
+            incremented = incremented.resetTo0Flashed().toMutableMap()
+
+            incremented = incremented.incrementAllEnergyBy1().toMutableMap()
         }
-        //step1
         return -1
     }
 
@@ -150,6 +137,6 @@ fun main() {
 
     input.mapIndexed { indexY, row -> row.toCharArray().mapIndexed { indexX, it -> map.put(Position(indexX, indexY), it.toString().toInt()) } }
 
-   // println(part1(map.toMap()))
-    println(part2(map.toMap()))
+    println(part1(map.toMap()))//1669
+    println(part2(map.toMap()))//351
 }
