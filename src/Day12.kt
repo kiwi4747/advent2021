@@ -1,3 +1,6 @@
+import kotlin.math.abs
+import kotlin.random.Random
+
 fun main() {
     val START = "start"
     val END = "end"
@@ -30,6 +33,15 @@ fun main() {
 
         //nope
         return temp
+    }
+
+    fun List<String>.getRandomino(): String {
+        if (this.size > 1) {
+            val size = this.size
+            val random = abs(Random.nextInt()) % size
+            return this[random]
+        }
+        return this[0]
     }
 
 
@@ -71,6 +83,12 @@ fun main() {
         return temp
     }
 
+    fun MutableList<List<String>>.addIfAbsent(list: List<String>) {
+        if (!this.contains(list)) {
+            this.add(list)
+        }
+    }
+
     fun part1(input: List<String>): Int {
         val possibleMovement = mutableMapOf<String, List<String>>()
         input.map {
@@ -79,42 +97,54 @@ fun main() {
             possibleMovement.addOrAdd((listOf(splitted[1], splitted[0])))
         }
         println(possibleMovement)
-        val allTentatives = mutableListOf<List<String>>()
         var startTentativePossibilities = possibleMovement.toMap()
         var end = false
         var failed = false
-        val tentative = mutableListOf<String>()
-        tentative.add(START)
-        var lastItem = START
-        for(i in 0..2) {
-            while (!end || failed) {
-                if (lastItem.lowercase() == lastItem) {
-                    startTentativePossibilities = startTentativePossibilities.removeAllValues(lastItem)
+        var maximumNumber = 0
+        for (f in 0..10) {
+            val allTentatives = mutableListOf<List<String>>()
+            for (i in 0..10000000) {
+                val tentative = mutableListOf<String>()
+                tentative.add(START)
+                var lastItem = START
+                while (!end && !failed) {
+                    if (lastItem.lowercase() == lastItem) {
+                        startTentativePossibilities = startTentativePossibilities.removeAllValues(lastItem)
+                    }
+                    if (startTentativePossibilities[lastItem] == null || startTentativePossibilities[lastItem]!!.isEmpty()) {
+                        failed = true
+                    } else {
+                        val random = startTentativePossibilities[lastItem]!!.getRandomino()
+                        tentative.add(random)
+                        lastItem = random
+                        if (lastItem == END)
+                            end = true
+                    }
                 }
-                if (startTentativePossibilities[lastItem] == null || startTentativePossibilities[lastItem]!!.isEmpty()) {
-                    failed = true
-                } else {
-                    tentative.add(startTentativePossibilities[lastItem]!!.first())
-                    lastItem = startTentativePossibilities[lastItem]!!.first()
-                    if (lastItem == END)
-                        end = true
+                if (!failed) {
+                    //    println(tentative)
+                    allTentatives.addIfAbsent(tentative)
+                }
+                end = false
+                failed = false
+                startTentativePossibilities = possibleMovement
+                if (i % 1000 == 0) {
+                    println("iteration $i")
                 }
             }
-            if (!failed) {
-                println(tentative)
-                allTentatives.add(tentative)
-            }
-            startTentativePossibilities = possibleMovement.deleteLastCombo(tentative)
+            if (allTentatives.size > maximumNumber)
+                maximumNumber = allTentatives.size
+            println(allTentatives.size)
         }
 
-        return input.size
+        return maximumNumber
     }
 
     fun part2(input: List<String>): Int {
         return input.size
     }
 
-    val input = readInput("Day12_2")
+    val input = readInput("Day12")
     println(part1(input))
     println(part2(input))
 }
